@@ -29,6 +29,12 @@ final class MailGatewayTransport extends AbstractTransport
         }
         $recipients = array_merge($email->getTo(), $email->getCc(), $email->getBcc());
         $replyTo = $email->getReplyTo()[0] ?? null;
+        $headers = $email->getHeaders();
+        $baseKey = $headers->get('Idempotency-Key')?->getBodyAsString()
+            ?? $headers->get('X-Idempotency-Key')?->getBodyAsString();
+        $headers->remove('Idempotency-Key');
+        $headers->remove('X-Idempotency-Key');
+        $multi = count($recipients) > 1;
 
         foreach ($recipients as $address) {
             $payload = array_filter([
@@ -39,7 +45,8 @@ final class MailGatewayTransport extends AbstractTransport
                 'text' => $email->getTextBody() !== null ? (string) $email->getTextBody() : null,
                 'replyTo' => $replyTo?->getAddress(),
             ], static fn ($v) => $v !== null && $v !== '');
-            $this->client->send($payload);
+            $key = $baseKey ? ($multi ? substr($baseKey . ':' . $address->getAddress(), 0, 255) : $baseKey) : null;
+            $this->client->send($payload, $key);
         }
     }
 

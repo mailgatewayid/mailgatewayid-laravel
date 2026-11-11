@@ -14,6 +14,15 @@ MAIL_FROM_ADDRESS=no-reply@domainanda.id
 
 Kode lama tetap jalan: `Mail::to($user)->send(new OrderShipped($order));`
 
+Retry aman (Idempotency-Key, opsional, berlaku 24 jam). Tambahkan header di Mailable; untuk banyak penerima, key otomatis diberi akhiran alamat penerima:
+
+```php
+public function headers(): \Illuminate\Mail\Mailables\Headers
+{
+    return new \Illuminate\Mail\Mailables\Headers(text: ['Idempotency-Key' => 'invoice-' . $this->order->id]);
+}
+```
+
 Verifikasi email & webhook:
 
 ```php
